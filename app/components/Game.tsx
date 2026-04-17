@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid } from "./Grid";
 import { Keyboard } from "./Keyboard";
+import { StatsPanel } from "./Stats";
 import {
   aggregateKeyStates,
   getDailyBrand,
@@ -10,6 +11,15 @@ import {
   MAX_GUESSES,
 } from "../lib/game";
 import { buildShareString, copyToClipboard, getPuzzleNumber } from "../lib/share";
+import {
+  EMPTY_STATS,
+  loadProgress,
+  loadStats,
+  recordGame,
+  saveProgress,
+  saveStats,
+  type Stats,
+} from "../lib/stats";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -18,12 +28,51 @@ export function Game() {
   const brand = useMemo(() => getDailyBrand(), []);
   const answer = brand.name;
   const length = answer.length;
+  const puzzleNumber = useMemo(() => getPuzzleNumber(), []);
 
   const [guesses, setGuesses] = useState<string[]>([]);
   const [current, setCurrent] = useState("");
   const [status, setStatus] = useState<GameStatus>("playing");
   const [toast, setToast] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [stats, setStats] = useState<Stats>(EMPTY_STATS);
+  const [hydrated, setHydrated] = useState(false);
+  const recordedRef = useRef(false);
+
+  // Hydrate stats and any in-progress game for today.
+  useEffect(() => {
+    setStats(loadStats());
+    const progress = loadProgress();
+    if (progress && progress.puzzleNumber === puzzleNumber) {
+      setGuesses(progress.guesses);
+      setStatus(progress.status);
+      // If the saved game was already finished, mark as recorded so we don't
+      // double-count when the next useEffect runs.
+      if (progress.status !== "playing") {
+        recordedRef.current = true;
+      }
+    }
+    setHydrated(true);
+  }, [puzzleNumber]);
+
+  // Persist daily progress whenever guesses or status change (post-hydration).
+  useEffect(() => {
+    if (!hydrated) return;
+    saveProgress({ puzzleNumber, guesses, status });
+  }, [hydrated, puzzleNumber, guesses, status]);
+
+  // Record stats exactly once per finished game.
+  useEffect(() => {
+    if (!hydrated) return;
+    if (status === "playing") return;
+    if (recordedRef.current) return;
+    recordedRef.current = true;
+    setStats((prev) => {
+      const next = recordGame(prev, puzzleNumber, status === "won", guesses.length);
+      saveStats(next);
+      return next;
+    });
+  }, [hydrated, status, puzzleNumber, guesses.length]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -132,6 +181,7 @@ export function Game() {
           status={status}
           guesses={guesses}
           answer={answer}
+          stats={stats}
           onShare={async () => {
             const text = buildShareString(guesses, answer, status === "won");
             const ok = await copyToClipboard(text);
@@ -147,13 +197,14 @@ type EndPanelProps = {
   status: "won" | "lost";
   guesses: string[];
   answer: string;
+  stats: Stats;
   onShare: () => void;
 };
 
-function EndPanel({ status, guesses, answer, onShare }: EndPanelProps) {
+function EndPanel({ status, guesses, answer, stats, onShare }: EndPanelProps) {
   const num = getPuzzleNumber();
   return (
-    <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white/60 p-4 text-center text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-neutral-200 bg-white/60 p-4 text-center text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
       {status === "won" ? (
         <p className="font-semibold text-emerald-600">
           Solved in {guesses.length} {guesses.length === 1 ? "guess" : "guesses"}.
@@ -163,9 +214,9 @@ function EndPanel({ status, guesses, answer, onShare }: EndPanelProps) {
           The brand was <span className="font-black">{answer}</span>.
         </p>
       )}
+      <StatsPanel stats={stats} highlight={status === "won" ? guesses.length : null} />
       <p className="text-xs text-neutral-500">
-        Brandle #{num} · {answer.length} letters · come back tomorrow for a new
-        brand.
+        Brandle #{num} · {answer.length} letters · come back tomorrow.
       </p>
       <button
         type="button"
