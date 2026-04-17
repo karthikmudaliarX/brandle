@@ -7,9 +7,11 @@ import { StatsPanel } from "./Stats";
 import {
   aggregateKeyStates,
   getDailyBrand,
+  getRandomBrand,
   isValidGuess,
   MAX_GUESSES,
 } from "../lib/game";
+import { PUZZLE_BRANDS } from "../lib/brands";
 import { buildShareString, copyToClipboard, getPuzzleNumber } from "../lib/share";
 import {
   EMPTY_STATS,
@@ -26,8 +28,6 @@ type GameStatus = "playing" | "won" | "lost";
 export function Game() {
   // Pick today's brand once per mount (deterministic by UTC date).
   const brand = useMemo(() => getDailyBrand(), []);
-  const answer = brand.name;
-  const length = answer.length;
   const puzzleNumber = useMemo(() => getPuzzleNumber(), []);
 
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -37,34 +37,50 @@ export function Game() {
   const [shakeKey, setShakeKey] = useState(0); // increment to re-trigger animation
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [hydrated, setHydrated] = useState(false);
+  const [mode, setMode] = useState<"daily" | "practice">("daily");
+  const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
   const recordedRef = useRef(false);
+
+  const answer = mode === "practice" && practiceAnswer ? practiceAnswer : brand.name;
+  // Look up the practice brand object so we can show its category.
+  const practiceBrand =
+    mode === "practice" && practiceAnswer
+      ? (PUZZLE_BRANDS.find((b) => b.name === practiceAnswer) ?? brand)
+      : null;
+  const activeBrand = practiceBrand ?? brand;
+  const length = answer.length;
 
   // Hydrate stats and any in-progress game for today.
   useEffect(() => {
-    setStats(loadStats());
-    const progress = loadProgress();
-    if (progress && progress.puzzleNumber === puzzleNumber) {
-      setGuesses(progress.guesses);
-      setStatus(progress.status);
-      // If the saved game was already finished, mark as recorded so we don't
-      // double-count when the next useEffect runs.
-      if (progress.status !== "playing") {
-        recordedRef.current = true;
+    const id = window.setTimeout(() => {
+      setStats(loadStats());
+      const progress = loadProgress();
+      if (progress && progress.puzzleNumber === puzzleNumber) {
+        setGuesses(progress.guesses);
+        setStatus(progress.status);
+        // If the saved game was already finished, mark as recorded so we don't
+        // double-count when the next useEffect runs.
+        if (progress.status !== "playing") {
+          recordedRef.current = true;
+        }
       }
-    }
-    setHydrated(true);
+      setHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [puzzleNumber]);
 
   // Persist daily progress whenever guesses or status change (post-hydration).
   useEffect(() => {
     if (!hydrated) return;
+    if (mode !== "daily") return;
     saveProgress({ puzzleNumber, guesses, status });
-  }, [hydrated, puzzleNumber, guesses, status]);
+  }, [hydrated, puzzleNumber, guesses, status, mode]);
 
   // Record stats exactly once per finished game.
   useEffect(() => {
     if (!hydrated) return;
     if (status === "playing") return;
+    if (mode !== "daily") return;
     if (recordedRef.current) return;
     recordedRef.current = true;
     setStats((prev) => {
@@ -72,7 +88,7 @@ export function Game() {
       saveStats(next);
       return next;
     });
-  }, [hydrated, status, puzzleNumber, guesses.length]);
+  }, [hydrated, status, puzzleNumber, guesses.length, mode]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -119,6 +135,31 @@ export function Game() {
     [answer, current, guesses, length, showToast, status]
   );
 
+  const playAgain = useCallback(() => {
+    const next = getRandomBrand(answer);
+    setPracticeAnswer(next.name);
+    setMode("practice");
+    setGuesses([]);
+    setCurrent("");
+    setStatus("playing");
+    setShakeKey(0);
+  }, [answer]);
+
+  const returnToDaily = useCallback(() => {
+    setMode("daily");
+    setPracticeAnswer(null);
+    setGuesses([]);
+    setCurrent("");
+    setStatus("playing");
+    setShakeKey(0);
+    // Restore today's saved progress if it exists.
+    const saved = loadProgress();
+    if (saved && saved.puzzleNumber === puzzleNumber) {
+      setGuesses(saved.guesses);
+      setStatus(saved.status);
+    }
+  }, [puzzleNumber]);
+
   // Physical keyboard.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -141,7 +182,14 @@ export function Game() {
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-6 px-4">
       <header className="flex w-full flex-col items-center gap-1 pt-4">
-        <h1 className="text-3xl font-black tracking-tight">BRANDLE</h1>
+        <h1 className="text-3xl font-black tracking-tight">
+          BRANDLE
+          {mode === "practice" && (
+            <span className="ml-2 align-middle text-xs font-semibold tracking-widest text-amber-500 uppercase">
+              Practice
+            </span>
+          )}
+        </h1>
         <p className="text-sm text-neutral-500 dark:text-neutral-400">
           Today&apos;s brand has{" "}
           <span className="font-bold text-neutral-900 dark:text-neutral-100">
@@ -149,7 +197,7 @@ export function Game() {
           </span>{" "}
           · category:{" "}
           <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-            {brand.category}
+            {activeBrand.category}
           </span>
         </p>
       </header>
@@ -180,11 +228,14 @@ export function Game() {
           guesses={guesses}
           answer={answer}
           stats={stats}
+          mode={mode}
           onShare={async () => {
             const text = buildShareString(guesses, answer, status === "won");
             const ok = await copyToClipboard(text);
             showToast(ok ? "Copied to clipboard" : "Couldn't copy");
           }}
+          onPlayAgain={playAgain}
+          onReturnToDaily={returnToDaily}
         />
       )}
     </div>
@@ -196,10 +247,22 @@ type EndPanelProps = {
   guesses: string[];
   answer: string;
   stats: Stats;
+  mode: "daily" | "practice";
   onShare: () => void;
+  onPlayAgain: () => void;
+  onReturnToDaily: () => void;
 };
 
-function EndPanel({ status, guesses, answer, stats, onShare }: EndPanelProps) {
+function EndPanel({
+  status,
+  guesses,
+  answer,
+  stats,
+  mode,
+  onShare,
+  onPlayAgain,
+  onReturnToDaily,
+}: EndPanelProps) {
   const num = getPuzzleNumber();
   return (
     <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-neutral-200 bg-white/60 p-4 text-center text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
@@ -213,16 +276,43 @@ function EndPanel({ status, guesses, answer, stats, onShare }: EndPanelProps) {
         </p>
       )}
       <StatsPanel stats={stats} highlight={status === "won" ? guesses.length : null} />
-      <p className="text-xs text-neutral-500">
-        Brandle #{num} · {answer.length} letters · come back tomorrow.
-      </p>
-      <button
-        type="button"
-        onClick={onShare}
-        className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 active:scale-95"
-      >
-        Share result
-      </button>
+      {mode === "daily" && (
+        <p className="text-xs text-neutral-500">
+          Brandle #{num} · {answer.length} letters · come back tomorrow.
+        </p>
+      )}
+      {mode === "practice" && (
+        <p className="text-xs text-neutral-500">
+          Practice mode · {answer.length} letters · stats not counted
+        </p>
+      )}
+      <div className="flex w-full flex-col gap-2">
+        <button
+          type="button"
+          onClick={onPlayAgain}
+          className="w-full rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 active:scale-95"
+        >
+          Play Again
+        </button>
+        {mode === "daily" && (
+          <button
+            type="button"
+            onClick={onShare}
+            className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:hover:bg-neutral-800"
+          >
+            Share result
+          </button>
+        )}
+        {mode === "practice" && (
+          <button
+            type="button"
+            onClick={onReturnToDaily}
+            className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          >
+            ← Today&apos;s puzzle
+          </button>
+        )}
+      </div>
     </div>
   );
 }

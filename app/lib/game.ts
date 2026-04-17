@@ -12,6 +12,13 @@ export function getDailyBrand(date: Date = new Date()): Brand {
   return PUZZLE_BRANDS[idx];
 }
 
+// Pick a random brand excluding `exclude` (today's daily answer).
+// Practice rounds use Math.random() — no need for determinism.
+export function getRandomBrand(exclude: string): Brand {
+  const pool = PUZZLE_BRANDS.filter((b) => b.name !== exclude);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 // Simple stable string hash (xfnv1a-ish). Good enough for daily seed selection.
 function hashString(s: string): number {
   let h = 2166136261 >>> 0;
