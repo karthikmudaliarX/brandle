@@ -34,7 +34,7 @@ export function Game() {
   const [current, setCurrent] = useState("");
   const [status, setStatus] = useState<GameStatus>("playing");
   const [toast, setToast] = useState<string | null>(null);
-  const [shake, setShake] = useState(false);
+  const [shakeKey, setShakeKey] = useState(0); // increment to re-trigger animation
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
   const [hydrated, setHydrated] = useState(false);
   const recordedRef = useRef(false);
@@ -85,15 +85,13 @@ export function Game() {
 
       if (key === "ENTER") {
         if (current.length !== length) {
-          setShake(true);
-          window.setTimeout(() => setShake(false), 400);
+          setShakeKey((k) => k + 1);
           showToast(`Need ${length} letters`);
           return;
         }
         if (!isValidGuess(current, length)) {
-          setShake(true);
-          window.setTimeout(() => setShake(false), 400);
-          showToast("Not in brand list");
+          setShakeKey((k) => k + 1);
+          showToast("Letters only");
           return;
         }
         const next = [...guesses, current];
@@ -161,7 +159,7 @@ export function Game() {
           answer={answer}
           guesses={guesses}
           current={current}
-          invalidShake={shake}
+          shakeKey={shakeKey}
         />
         {toast && (
           <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white shadow dark:bg-neutral-100 dark:text-neutral-900">

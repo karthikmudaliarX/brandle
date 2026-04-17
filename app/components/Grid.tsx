@@ -5,10 +5,10 @@ type GridProps = {
   answer: string;
   guesses: string[];
   current: string;
-  invalidShake: boolean;
+  shakeKey: number;
 };
 
-export function Grid({ answer, guesses, current, invalidShake }: GridProps) {
+export function Grid({ answer, guesses, current, shakeKey }: GridProps) {
   const length = answer.length;
   const rows: { letters: string[]; states: TileState[]; isCurrent: boolean }[] = [];
 
@@ -43,8 +43,8 @@ export function Grid({ answer, guesses, current, invalidShake }: GridProps) {
     <div className="flex flex-col items-center gap-1.5">
       {rows.map((row, r) => (
         <div
-          key={r}
-          className={`grid w-full gap-1.5 ${row.isCurrent && invalidShake ? "animate-shake" : ""}`}
+          key={row.isCurrent ? `current-${shakeKey}` : r}
+          className={`grid w-full gap-1.5 ${row.isCurrent && shakeKey > 0 ? "animate-shake" : ""}`}
           style={{
             gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))`,
             maxWidth: `${maxRowWidth}ch`,

@@ -1,4 +1,4 @@
-import { PUZZLE_BRANDS, VALID_GUESSES, type Brand } from "./brands";
+import { PUZZLE_BRANDS, type Brand } from "./brands";
 
 export type TileState = "correct" | "present" | "absent" | "empty" | "pending";
 export const MAX_GUESSES = 6;
@@ -75,8 +75,10 @@ export function aggregateKeyStates(
   return map;
 }
 
+// Allow any alphabetic word of the correct length — only the ANSWER is
+// restricted to the curated brand list. Locking guesses to the brand list
+// would leave players with ~19 valid guesses for a 5-letter puzzle.
 export function isValidGuess(guess: string, length: number): boolean {
   if (guess.length !== length) return false;
-  if (!/^[A-Z]+$/.test(guess)) return false;
-  return VALID_GUESSES.has(guess);
+  return /^[A-Z]+$/.test(guess);
 }
