@@ -9,6 +9,7 @@ import {
   isValidGuess,
   MAX_GUESSES,
 } from "../lib/game";
+import { buildShareString, copyToClipboard, getPuzzleNumber } from "../lib/share";
 
 type GameStatus = "playing" | "won" | "lost";
 
@@ -127,19 +128,52 @@ export function Game() {
       />
 
       {status !== "playing" && (
-        <div className="text-center text-sm">
-          {status === "won" ? (
-            <p className="font-semibold text-emerald-600">
-              Solved in {guesses.length} {guesses.length === 1 ? "guess" : "guesses"}.
-            </p>
-          ) : (
-            <p className="font-semibold text-rose-600">
-              The brand was <span className="font-black">{answer}</span>.
-            </p>
-          )}
-          <p className="mt-1 text-neutral-500">Come back tomorrow for a new brand.</p>
-        </div>
+        <EndPanel
+          status={status}
+          guesses={guesses}
+          answer={answer}
+          onShare={async () => {
+            const text = buildShareString(guesses, answer, status === "won");
+            const ok = await copyToClipboard(text);
+            showToast(ok ? "Copied to clipboard" : "Couldn't copy");
+          }}
+        />
       )}
+    </div>
+  );
+}
+
+type EndPanelProps = {
+  status: "won" | "lost";
+  guesses: string[];
+  answer: string;
+  onShare: () => void;
+};
+
+function EndPanel({ status, guesses, answer, onShare }: EndPanelProps) {
+  const num = getPuzzleNumber();
+  return (
+    <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-lg border border-neutral-200 bg-white/60 p-4 text-center text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
+      {status === "won" ? (
+        <p className="font-semibold text-emerald-600">
+          Solved in {guesses.length} {guesses.length === 1 ? "guess" : "guesses"}.
+        </p>
+      ) : (
+        <p className="font-semibold text-rose-600">
+          The brand was <span className="font-black">{answer}</span>.
+        </p>
+      )}
+      <p className="text-xs text-neutral-500">
+        Brandle #{num} · {answer.length} letters · come back tomorrow for a new
+        brand.
+      </p>
+      <button
+        type="button"
+        onClick={onShare}
+        className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 active:scale-95"
+      >
+        Share result
+      </button>
     </div>
   );
 }
