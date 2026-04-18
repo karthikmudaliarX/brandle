@@ -38,6 +38,8 @@ export function buildShareString(
     `Brandle #${num} · ${answer.length} letters · ${score}`,
     "",
     ...lines,
+    "",
+    "brandle.today",
   ].join("\n");
 }
 

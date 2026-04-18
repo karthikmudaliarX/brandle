@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Countdown } from "./Countdown";
 import { Grid } from "./Grid";
 import { Keyboard } from "./Keyboard";
 import { StatsPanel } from "./Stats";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   aggregateKeyStates,
   getDailyBrand,
@@ -12,7 +14,7 @@ import {
   isValidGuess,
   MAX_GUESSES,
 } from "../lib/game";
-import { PUZZLE_BRANDS } from "../lib/brands";
+import { PUZZLE_BRANDS, type Brand } from "../lib/brands";
 import { buildShareString, getPuzzleNumber, shareResult } from "../lib/share";
 import {
   EMPTY_STATS,
@@ -182,7 +184,10 @@ export function Game() {
 
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-6 px-4">
-      <header className="flex w-full flex-col items-center gap-1 pt-4">
+      <header className="relative flex w-full flex-col items-center gap-1 pt-4">
+        <div className="absolute right-0 top-4">
+          <ThemeToggle />
+        </div>
         <h1 className="text-3xl font-black tracking-tight">
           BRANDLE
           {mode === "practice" && (
@@ -201,12 +206,14 @@ export function Game() {
             {activeBrand.category}
           </span>
         </p>
-        <Link
-          href="/how-to-play"
-          className="text-xs font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
-        >
-          New? How to play
-        </Link>
+        {!hydrated || stats.played === 0 ? (
+          <Link
+            href="/how-to-play"
+            className="text-xs font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
+          >
+            New? How to play
+          </Link>
+        ) : null}
       </header>
 
       <div className="relative w-full">
@@ -234,7 +241,9 @@ export function Game() {
           status={status}
           guesses={guesses}
           answer={answer}
+          activeBrand={activeBrand}
           stats={stats}
+          hydrated={hydrated}
           mode={mode}
           onShare={async () => {
             const text = buildShareString(guesses, answer, status === "won");
@@ -259,7 +268,9 @@ type EndPanelProps = {
   status: "won" | "lost";
   guesses: string[];
   answer: string;
+  activeBrand: Brand;
   stats: Stats;
+  hydrated: boolean;
   mode: "daily" | "practice";
   onShare: () => void;
   onPlayAgain: () => void;
@@ -270,7 +281,9 @@ function EndPanel({
   status,
   guesses,
   answer,
+  activeBrand,
   stats,
+  hydrated,
   mode,
   onShare,
   onPlayAgain,
@@ -280,19 +293,58 @@ function EndPanel({
   return (
     <div className="flex w-full max-w-sm flex-col items-center gap-4 rounded-lg border border-neutral-200 bg-white/60 p-4 text-center text-sm shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
       {status === "won" ? (
-        <p className="font-semibold text-emerald-600">
-          Solved in {guesses.length} {guesses.length === 1 ? "guess" : "guesses"}.
-        </p>
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-semibold text-emerald-600">
+            Solved in {guesses.length} {guesses.length === 1 ? "guess" : "guesses"}.
+          </p>
+          {activeBrand.fact && (
+            <p className="text-xs italic text-neutral-500">💡 {activeBrand.fact}</p>
+          )}
+        </div>
       ) : (
-        <p className="font-semibold text-rose-600">
-          The brand was <span className="font-black">{answer}</span>.
-        </p>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm font-semibold text-rose-600">The brand was:</p>
+          <div className="flex max-w-full flex-wrap justify-center gap-1">
+            {answer.split("").map((letter, i) => (
+              <div
+                key={i}
+                className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500 text-base font-bold uppercase text-white"
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
-      <StatsPanel stats={stats} highlight={status === "won" ? guesses.length : null} />
+      {hydrated ? (
+        <StatsPanel stats={stats} highlight={status === "won" ? guesses.length : null} />
+      ) : (
+        <div className="flex w-full flex-col gap-3">
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex flex-col items-center gap-1">
+                <div className="h-8 w-10 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
+                <div className="h-2 w-8 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="h-2 w-3 rounded bg-neutral-200 dark:bg-neutral-700" />
+                <div className="h-5 w-full animate-pulse rounded-sm bg-neutral-200 dark:bg-neutral-700" />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {mode === "daily" && (
-        <p className="text-xs text-neutral-500">
-          Brandle #{num} · {answer.length} letters · come back tomorrow.
-        </p>
+        <>
+          <Countdown />
+          <p className="text-xs text-neutral-500">
+            Brandle #{num} · {answer.length} letters · come back tomorrow.
+          </p>
+        </>
       )}
       {mode === "practice" && (
         <p className="text-xs text-neutral-500">

@@ -51,7 +51,12 @@ export function Grid({ answer, guesses, current, shakeKey }: GridProps) {
           }}
         >
           {row.letters.map((letter, i) => (
-            <Tile key={i} letter={letter} state={row.states[i]} />
+            <Tile
+              key={i}
+              letter={letter}
+              state={row.states[i]}
+              delay={row.isCurrent ? 0 : i * 100}
+            />
           ))}
         </div>
       ))}

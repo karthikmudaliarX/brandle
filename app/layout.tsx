@@ -17,6 +17,29 @@ export const metadata: Metadata = {
   title: "Brandle — Wordle for brand names",
   description:
     "A daily word puzzle where the answer is a brand. The length changes every day.",
+  metadataBase: new URL("https://brandle.today"),
+  openGraph: {
+    title: "Brandle — Wordle for brand names",
+    description: "Guess the brand. A new puzzle every day.",
+    url: "https://brandle.today",
+    siteName: "Brandle",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Brandle — Wordle for brand names",
+      },
+    ],
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Brandle — Wordle for brand names",
+    description: "Guess the brand. A new puzzle every day.",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: [{ url: "/favicon.png", sizes: "1024x1024", type: "image/png" }],
     shortcut: ["/favicon.png"],
@@ -33,7 +56,26 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var t = localStorage.getItem('brandle.theme');
+                  if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  } else if (t === 'light') {
+                    document.documentElement.classList.add('light');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <Analytics />

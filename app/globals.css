@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -13,10 +16,23 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    color-scheme: dark;
   }
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  color-scheme: dark;
+}
+
+.light {
+  --background: #ffffff;
+  --foreground: #171717;
+  color-scheme: light;
 }
 
 body {
@@ -35,4 +51,15 @@ body {
 
 .animate-shake {
   animation: shake 0.4s ease-in-out;
+}
+
+@keyframes tile-flip {
+  0% { transform: rotateX(0deg); }
+  50% { transform: rotateX(-90deg); }
+  100% { transform: rotateX(0deg); }
+}
+
+.tile-flip {
+  animation: tile-flip 0.4s ease-in-out both;
+  transform-style: preserve-3d;
 }
