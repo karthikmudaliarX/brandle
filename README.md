@@ -1,27 +1,62 @@
 # Brandle
 
-A Wordle-style daily puzzle where the answer is a brand name. The length changes every day — today's brand might be 4 letters, tomorrow's 8 — so the grid resizes with the puzzle. The category is shown as a hint.
+Brandle is a daily Wordle-style puzzle for brand names. Each day, the answer is
+picked deterministically from a curated brand list, with the letter count and
+category shown up front as hints.
 
-Built with Next.js 16, React 19, and Tailwind CSS 4.
+![Brandle game screenshot](public/screenshot.png)
 
-## Run locally
+## Features
+
+- Daily puzzle keyed to the UTC date, so everyone gets the same brand each day.
+- Variable-width board that adapts to the answer length.
+- Six guesses with familiar Wordle feedback: correct spot, present letter, or absent.
+- Alphabetic guesses only, with the answer drawn from the curated brand list.
+- Local progress, stats, streaks, and guess distribution.
+- Shareable result text with native share support and clipboard fallback.
+- Practice mode after the daily puzzle, with no stats or saved progress.
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- Tailwind CSS 4
+- TypeScript
+
+## Run Locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open [http://localhost:3000](http://localhost:3000). If that port is already in
+use, Next.js will print the alternate local URL.
 
-## How it works
+## Project Structure
 
-- One puzzle per UTC day, picked deterministically from a curated brand list (`app/lib/brands.ts`).
-- 6 guesses. Standard Wordle feedback: green = right letter & spot, amber = right letter wrong spot, gray = not in word.
-- Guesses must be brand names from the list (no random words).
+```text
+app/
+  components/     Game board, keyboard, stats, and tile UI
+  lib/            Brand data, game logic, stats, and sharing helpers
+  page.tsx        App shell and footer credit
+public/
+  screenshot.png  README preview image
+```
 
-## Roadmap
+## Game Logic
 
-- Share-your-result string after winning/losing
-- Stats and streak persistence in localStorage
-- Per-category modes (tech only, automotive only, etc.)
-- Brand logos on the win screen
+- `app/lib/brands.ts` stores the curated brand list.
+- `app/lib/game.ts` selects the daily brand and evaluates guesses.
+- `app/lib/stats.ts` stores daily progress and stats in `localStorage`.
+- `app/lib/share.ts` builds the share string and handles sharing/copying.
+
+## Scripts
+
+```bash
+npm run dev     # Start the local development server
+npm run lint    # Run ESLint
+npm run build   # Build for production
+```
+
+Made with <3 by karthik.
