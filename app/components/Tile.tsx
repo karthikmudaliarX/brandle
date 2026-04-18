@@ -23,6 +23,8 @@ export function Tile({ letter, state, delay = 0 }: TileProps) {
   // Only hide-then-reveal when state transitions to revealed (new guess submitted).
   const [showColor, setShowColor] = useState(revealed);
   const prevState = useRef(state);
+  const [popped, setPopped] = useState(false);
+  const prevLetter = useRef(letter);
   const displayState = revealed && !showColor ? "pending" : state;
 
   useEffect(() => {
@@ -39,10 +41,22 @@ export function Tile({ letter, state, delay = 0 }: TileProps) {
     return () => window.clearTimeout(id);
   }, [delay, revealed, state]);
 
+  useEffect(() => {
+    if (letter && !prevLetter.current && state === "pending") {
+      setPopped(true);
+      const id = window.setTimeout(() => setPopped(false), 150);
+      return () => window.clearTimeout(id);
+    }
+    prevLetter.current = letter;
+  }, [letter, state]);
+
   return (
     <div
       className={`flex aspect-square w-full items-center justify-center border-2 text-2xl font-bold uppercase select-none sm:text-3xl ${STATE_CLASSES[displayState]} ${revealed && !showColor ? "tile-flip" : ""}`}
-      style={revealed && !showColor && delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
+      style={{
+        ...(revealed && !showColor && delay > 0 ? { animationDelay: `${delay}ms` } : {}),
+        ...(popped ? { animation: "tile-pop 0.15s ease-in-out" } : {}),
+      }}
     >
       {letter}
     </div>

@@ -7,9 +7,17 @@ type GridProps = {
   current: string;
   shakeKey: number;
   maxGuesses: number;
+  winningRow?: number;
 };
 
-export function Grid({ answer, guesses, current, shakeKey, maxGuesses }: GridProps) {
+export function Grid({
+  answer,
+  guesses,
+  current,
+  shakeKey,
+  maxGuesses,
+  winningRow,
+}: GridProps) {
   const length = answer.length;
   const rows: { letters: string[]; states: TileState[]; isCurrent: boolean }[] = [];
 
@@ -54,12 +62,17 @@ export function Grid({ answer, guesses, current, shakeKey, maxGuesses }: GridPro
           }}
         >
           {row.letters.map((letter, i) => (
-            <Tile
+            <div
               key={i}
-              letter={letter}
-              state={row.states[i]}
-              delay={row.isCurrent ? 0 : i * 100}
-            />
+              className={r === winningRow ? "animate-bounce-tile" : ""}
+              style={r === winningRow ? { animationDelay: `${i * 80}ms` } : undefined}
+            >
+              <Tile
+                letter={letter}
+                state={row.states[i]}
+                delay={row.isCurrent ? 0 : i * 100}
+              />
+            </div>
           ))}
         </div>
       ))}

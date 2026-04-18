@@ -45,11 +45,15 @@ export function Game() {
   const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
   const recordedRef = useRef(false);
+  const endPanelRef = useRef<HTMLDivElement>(null);
+  const previousStatusRef = useRef<GameStatus>("playing");
+  const readyToScrollRef = useRef(false);
 
   const answer = mode === "practice" && practiceAnswer ? practiceAnswer : brand.name;
   const config = DIFFICULTY[difficulty];
   const maxGuesses = config.maxGuesses;
   const difficultyLocked = mode === "daily" && guesses.length > 0;
+  const winningRow = status === "won" ? guesses.length - 1 : undefined;
   // Look up the practice brand object so we can show its category.
   const practiceBrand =
     mode === "practice" && practiceAnswer
@@ -97,6 +101,22 @@ export function Game() {
       return next;
     });
   }, [difficulty, hydrated, status, puzzleNumber, guesses.length, mode]);
+
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (!hydrated) return;
+    if (!readyToScrollRef.current) {
+      readyToScrollRef.current = true;
+      return;
+    }
+    if (previousStatus === "playing" && status !== "playing" && endPanelRef.current) {
+      const id = window.setTimeout(() => {
+        endPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 400);
+      return () => window.clearTimeout(id);
+    }
+  }, [hydrated, status]);
 
   const showToast = useCallback((msg: string, durationMs?: number) => {
     const duration = durationMs ?? Math.max(1600, msg.length * 200);
@@ -206,7 +226,14 @@ export function Game() {
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-3 px-4">
       <header className="relative flex w-full flex-col items-center gap-1 pt-4">
-        <div className="absolute right-0 top-4">
+        <div className="absolute right-0 top-4 flex items-center gap-1">
+          <Link
+            href="/how-to-play"
+            aria-label="How to play"
+            className="rounded p-1 text-sm font-bold text-neutral-400 transition hover:text-neutral-900 dark:hover:text-neutral-100"
+          >
+            ?
+          </Link>
           <ThemeToggle />
         </div>
         <h1 className="text-3xl font-black tracking-tight">
@@ -249,14 +276,6 @@ export function Game() {
             Locked for today&apos;s puzzle
           </p>
         )}
-        {!hydrated || stats.played === 0 ? (
-          <Link
-            href="/how-to-play"
-            className="text-xs font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
-          >
-            New? How to play
-          </Link>
-        ) : null}
       </header>
 
       <div className="relative w-full">
@@ -266,6 +285,7 @@ export function Game() {
           current={current}
           shakeKey={shakeKey}
           maxGuesses={maxGuesses}
+          winningRow={winningRow}
         />
         {toast && (
           <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white shadow dark:bg-neutral-100 dark:text-neutral-900">
@@ -280,39 +300,41 @@ export function Game() {
         disabled={status !== "playing"}
       />
 
-      {status !== "playing" && (
-        <EndPanel
-          status={status}
-          guesses={guesses}
-          answer={answer}
-          activeBrand={activeBrand}
-          stats={stats}
-          hydrated={hydrated}
-          mode={mode}
-          difficulty={difficulty}
-          maxGuesses={maxGuesses}
-          onShare={async () => {
-            const text = buildShareString(
-              guesses,
-              answer,
-              status === "won",
-              activeBrand.category,
-              mode === "practice",
-              difficulty
-            );
-            const result = await shareResult(text);
-            showToast(
-              result === "shared"
-                ? "Shared"
-                : result === "copied"
-                  ? "Copied to clipboard"
-                  : "Couldn't share"
-            );
-          }}
-          onPlayAgain={playAgain}
-          onReturnToDaily={returnToDaily}
-        />
-      )}
+      <div ref={endPanelRef}>
+        {status !== "playing" && (
+          <EndPanel
+            status={status}
+            guesses={guesses}
+            answer={answer}
+            activeBrand={activeBrand}
+            stats={stats}
+            hydrated={hydrated}
+            mode={mode}
+            difficulty={difficulty}
+            maxGuesses={maxGuesses}
+            onShare={async () => {
+              const text = buildShareString(
+                guesses,
+                answer,
+                status === "won",
+                activeBrand.category,
+                mode === "practice",
+                difficulty
+              );
+              const result = await shareResult(text);
+              showToast(
+                result === "shared"
+                  ? "Shared"
+                  : result === "copied"
+                    ? "Copied to clipboard"
+                    : "Couldn't share"
+              );
+            }}
+            onPlayAgain={playAgain}
+            onReturnToDaily={returnToDaily}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -421,15 +443,13 @@ function EndPanel({
         >
           Play Again
         </button>
-        {mode === "daily" && (
-          <button
-            type="button"
-            onClick={onShare}
-            className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:hover:bg-neutral-800"
-          >
-            Share result
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onShare}
+          className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          {mode === "practice" ? "Share (Practice)" : "Share result"}
+        </button>
         {mode === "practice" && (
           <button
             type="button"
