@@ -26,12 +26,17 @@ export type DailyProgress = {
   difficulty: Difficulty;
 };
 
+// Distribution always has 8 slots — the maximum guesses possible (Easy mode).
+// Hard and Medium wins land in slots 0–3 and 0–5 respectively; slots beyond
+// their max will always be 0. This keeps the array stable across difficulty switches.
+const DISTRIBUTION_SIZE = 8;
+
 export const EMPTY_STATS: Stats = {
   played: 0,
   won: 0,
   currentStreak: 0,
   maxStreak: 0,
-  distribution: Array(MAX_GUESSES).fill(0),
+  distribution: Array(DISTRIBUTION_SIZE).fill(0),
   lastCompleted: null,
 };
 
@@ -51,9 +56,14 @@ export function loadStats(difficulty: Difficulty = "medium"): Stats {
     const raw = window.localStorage.getItem(statsKey(difficulty));
     if (!raw) return EMPTY_STATS;
     const parsed = JSON.parse(raw) as Stats;
-    // Patch shape if distribution length drifted.
-    if (!Array.isArray(parsed.distribution) || parsed.distribution.length !== MAX_GUESSES) {
-      parsed.distribution = Array(MAX_GUESSES).fill(0);
+    // Migrate: extend short distributions with zeros rather than wiping them.
+    // Old saves had 6 slots; Easy mode needs 8.
+    if (!Array.isArray(parsed.distribution)) {
+      parsed.distribution = Array(DISTRIBUTION_SIZE).fill(0);
+    } else if (parsed.distribution.length < DISTRIBUTION_SIZE) {
+      while (parsed.distribution.length < DISTRIBUTION_SIZE) {
+        parsed.distribution.push(0);
+      }
     }
     return parsed;
   } catch {
@@ -86,7 +96,7 @@ export function recordGame(
   next.played += 1;
   if (won) {
     next.won += 1;
-    if (guessCount >= 1 && guessCount <= MAX_GUESSES) {
+    if (guessCount >= 1 && guessCount <= next.distribution.length) {
       next.distribution[guessCount - 1] += 1;
     }
     // Streak continues if the previous completed puzzle was yesterday.
