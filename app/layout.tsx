@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Brandle — Wordle for brand names",
   description:
     "A daily word puzzle where the answer is a brand. The length changes every day.",
+  icons: {
+    icon: [{ url: "/favicon.png", sizes: "1024x1024", type: "image/png" }],
+    shortcut: ["/favicon.png"],
+    apple: [{ url: "/favicon.png", sizes: "1024x1024", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
