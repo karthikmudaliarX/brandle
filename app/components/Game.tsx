@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Grid } from "./Grid";
 import { Keyboard } from "./Keyboard";
@@ -200,6 +201,12 @@ export function Game() {
             {activeBrand.category}
           </span>
         </p>
+        <Link
+          href="/how-to-play"
+          className="text-xs font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
+        >
+          New? How to play
+        </Link>
       </header>
 
       <div className="relative w-full">
