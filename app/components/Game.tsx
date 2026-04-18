@@ -12,7 +12,7 @@ import {
   MAX_GUESSES,
 } from "../lib/game";
 import { PUZZLE_BRANDS } from "../lib/brands";
-import { buildShareString, copyToClipboard, getPuzzleNumber } from "../lib/share";
+import { buildShareString, getPuzzleNumber, shareResult } from "../lib/share";
 import {
   EMPTY_STATS,
   loadProgress,
@@ -231,8 +231,14 @@ export function Game() {
           mode={mode}
           onShare={async () => {
             const text = buildShareString(guesses, answer, status === "won");
-            const ok = await copyToClipboard(text);
-            showToast(ok ? "Copied to clipboard" : "Couldn't copy");
+            const result = await shareResult(text);
+            showToast(
+              result === "shared"
+                ? "Shared"
+                : result === "copied"
+                  ? "Copied to clipboard"
+                  : "Couldn't share"
+            );
           }}
           onPlayAgain={playAgain}
           onReturnToDaily={returnToDaily}
