@@ -39,7 +39,7 @@ export function buildShareString(
     "",
     ...lines,
     "",
-    "brandle.today",
+    "https://brandle.today",
   ].join("\n");
 }
 
