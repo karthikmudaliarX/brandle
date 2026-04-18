@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Countdown } from "./Countdown";
+import { DifficultySelector } from "./DifficultySelector";
 import { Grid } from "./Grid";
 import { Keyboard } from "./Keyboard";
 import { StatsPanel } from "./Stats";
@@ -12,9 +13,9 @@ import {
   getDailyBrand,
   getRandomBrand,
   isValidGuess,
-  MAX_GUESSES,
 } from "../lib/game";
 import { PUZZLE_BRANDS, type Brand } from "../lib/brands";
+import { DIFFICULTY, loadDifficulty, saveDifficulty, type Difficulty } from "../lib/difficulty";
 import { buildShareString, getPuzzleNumber, shareResult } from "../lib/share";
 import {
   EMPTY_STATS,
@@ -42,9 +43,17 @@ export function Game() {
   const [hydrated, setHydrated] = useState(false);
   const [mode, setMode] = useState<"daily" | "practice">("daily");
   const [practiceAnswer, setPracticeAnswer] = useState<string | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => loadDifficulty());
   const recordedRef = useRef(false);
+  const endPanelRef = useRef<HTMLDivElement>(null);
+  const previousStatusRef = useRef<GameStatus>("playing");
+  const readyToScrollRef = useRef(false);
 
   const answer = mode === "practice" && practiceAnswer ? practiceAnswer : brand.name;
+  const config = DIFFICULTY[difficulty];
+  const maxGuesses = config.maxGuesses;
+  const difficultyLocked = mode === "daily" && guesses.length > 0;
+  const winningRow = status === "won" ? guesses.length - 1 : undefined;
   // Look up the practice brand object so we can show its category.
   const practiceBrand =
     mode === "practice" && practiceAnswer
@@ -56,8 +65,8 @@ export function Game() {
   // Hydrate stats and any in-progress game for today.
   useEffect(() => {
     const id = window.setTimeout(() => {
-      setStats(loadStats());
-      const progress = loadProgress();
+      setStats(loadStats(difficulty));
+      const progress = loadProgress(difficulty);
       if (progress && progress.puzzleNumber === puzzleNumber) {
         setGuesses(progress.guesses);
         setStatus(progress.status);
@@ -70,14 +79,14 @@ export function Game() {
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [puzzleNumber]);
+  }, [difficulty, puzzleNumber]);
 
   // Persist daily progress whenever guesses or status change (post-hydration).
   useEffect(() => {
     if (!hydrated) return;
     if (mode !== "daily") return;
-    saveProgress({ puzzleNumber, guesses, status });
-  }, [hydrated, puzzleNumber, guesses, status, mode]);
+    saveProgress({ puzzleNumber, guesses, status, difficulty });
+  }, [hydrated, puzzleNumber, guesses, status, mode, difficulty]);
 
   // Record stats exactly once per finished game.
   useEffect(() => {
@@ -88,14 +97,31 @@ export function Game() {
     recordedRef.current = true;
     setStats((prev) => {
       const next = recordGame(prev, puzzleNumber, status === "won", guesses.length);
-      saveStats(next);
+      saveStats(next, difficulty);
       return next;
     });
-  }, [hydrated, status, puzzleNumber, guesses.length, mode]);
+  }, [difficulty, hydrated, status, puzzleNumber, guesses.length, mode]);
 
-  const showToast = useCallback((msg: string) => {
+  useEffect(() => {
+    const previousStatus = previousStatusRef.current;
+    previousStatusRef.current = status;
+    if (!hydrated) return;
+    if (!readyToScrollRef.current) {
+      readyToScrollRef.current = true;
+      return;
+    }
+    if (previousStatus === "playing" && status !== "playing" && endPanelRef.current) {
+      const id = window.setTimeout(() => {
+        endPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 400);
+      return () => window.clearTimeout(id);
+    }
+  }, [hydrated, status]);
+
+  const showToast = useCallback((msg: string, durationMs?: number) => {
+    const duration = durationMs ?? Math.max(1600, msg.length * 200);
     setToast(msg);
-    window.setTimeout(() => setToast(null), 1600);
+    window.setTimeout(() => setToast(null), duration);
   }, []);
 
   const handleKey = useCallback(
@@ -103,6 +129,11 @@ export function Game() {
       if (status !== "playing") return;
 
       if (key === "ENTER") {
+        if (guesses.includes(current)) {
+          setShakeKey((k) => k + 1);
+          showToast("Already guessed");
+          return;
+        }
         if (current.length !== length) {
           setShakeKey((k) => k + 1);
           showToast(`Need ${length} letters`);
@@ -119,9 +150,9 @@ export function Game() {
         if (current === answer) {
           setStatus("won");
           showToast("Got it!");
-        } else if (next.length >= MAX_GUESSES) {
+        } else if (next.length >= maxGuesses) {
           setStatus("lost");
-          showToast(answer);
+          showToast(answer, answer.length * 300);
         }
         return;
       }
@@ -135,7 +166,17 @@ export function Game() {
         setCurrent((c) => c + key);
       }
     },
-    [answer, current, guesses, length, showToast, status]
+    [answer, current, guesses, length, maxGuesses, showToast, status]
+  );
+
+  const handleDifficultyChange = useCallback(
+    (d: Difficulty) => {
+      if (difficultyLocked) return;
+      setDifficulty(d);
+      saveDifficulty(d);
+      setCurrent("");
+    },
+    [difficultyLocked]
   );
 
   const playAgain = useCallback(() => {
@@ -156,12 +197,12 @@ export function Game() {
     setStatus("playing");
     setShakeKey(0);
     // Restore today's saved progress if it exists.
-    const saved = loadProgress();
+    const saved = loadProgress(difficulty);
     if (saved && saved.puzzleNumber === puzzleNumber) {
       setGuesses(saved.guesses);
       setStatus(saved.status);
     }
-  }, [puzzleNumber]);
+  }, [difficulty, puzzleNumber]);
 
   // Physical keyboard.
   useEffect(() => {
@@ -185,7 +226,14 @@ export function Game() {
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-3 px-4">
       <header className="relative flex w-full flex-col items-center gap-1 pt-4">
-        <div className="absolute right-0 top-4">
+        <div className="absolute right-0 top-4 flex items-center gap-1">
+          <Link
+            href="/how-to-play"
+            aria-label="How to play"
+            className="rounded p-1 text-sm font-bold text-neutral-400 transition hover:text-neutral-900 dark:hover:text-neutral-100"
+          >
+            ?
+          </Link>
           <ThemeToggle />
         </div>
         <h1 className="text-3xl font-black tracking-tight">
@@ -200,20 +248,34 @@ export function Game() {
           Today&apos;s brand has{" "}
           <span className="font-bold text-neutral-900 dark:text-neutral-100">
             {length} letters
-          </span>{" "}
-          · category:{" "}
-          <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-            {activeBrand.category}
           </span>
+          {config.showCategory && (
+            <>
+              {" "}· category:{" "}
+              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                {activeBrand.category}
+              </span>
+            </>
+          )}
+          {config.showLetterHint && (
+            <>
+              {" "}· starts with:{" "}
+              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                {answer[0]}
+              </span>
+            </>
+          )}
         </p>
-        {!hydrated || stats.played === 0 ? (
-          <Link
-            href="/how-to-play"
-            className="text-xs font-semibold text-emerald-700 underline-offset-4 hover:underline dark:text-emerald-400"
-          >
-            New? How to play
-          </Link>
-        ) : null}
+        <DifficultySelector
+          value={difficulty}
+          onChange={handleDifficultyChange}
+          disabled={difficultyLocked}
+        />
+        {difficultyLocked && (
+          <p className="text-[10px] text-neutral-400 dark:text-neutral-600">
+            Locked for today&apos;s puzzle
+          </p>
+        )}
       </header>
 
       <div className="relative w-full">
@@ -222,6 +284,8 @@ export function Game() {
           guesses={guesses}
           current={current}
           shakeKey={shakeKey}
+          maxGuesses={maxGuesses}
+          winningRow={winningRow}
         />
         {toast && (
           <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded bg-neutral-900 px-3 py-1.5 text-sm font-semibold text-white shadow dark:bg-neutral-100 dark:text-neutral-900">
@@ -236,30 +300,41 @@ export function Game() {
         disabled={status !== "playing"}
       />
 
-      {status !== "playing" && (
-        <EndPanel
-          status={status}
-          guesses={guesses}
-          answer={answer}
-          activeBrand={activeBrand}
-          stats={stats}
-          hydrated={hydrated}
-          mode={mode}
-          onShare={async () => {
-            const text = buildShareString(guesses, answer, status === "won");
-            const result = await shareResult(text);
-            showToast(
-              result === "shared"
-                ? "Shared"
-                : result === "copied"
-                  ? "Copied to clipboard"
-                  : "Couldn't share"
-            );
-          }}
-          onPlayAgain={playAgain}
-          onReturnToDaily={returnToDaily}
-        />
-      )}
+      <div ref={endPanelRef}>
+        {status !== "playing" && (
+          <EndPanel
+            status={status}
+            guesses={guesses}
+            answer={answer}
+            activeBrand={activeBrand}
+            stats={stats}
+            hydrated={hydrated}
+            mode={mode}
+            difficulty={difficulty}
+            maxGuesses={maxGuesses}
+            onShare={async () => {
+              const text = buildShareString(
+                guesses,
+                answer,
+                status === "won",
+                activeBrand.category,
+                mode === "practice",
+                difficulty
+              );
+              const result = await shareResult(text);
+              showToast(
+                result === "shared"
+                  ? "Shared"
+                  : result === "copied"
+                    ? "Copied to clipboard"
+                    : "Couldn't share"
+              );
+            }}
+            onPlayAgain={playAgain}
+            onReturnToDaily={returnToDaily}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -272,6 +347,8 @@ type EndPanelProps = {
   stats: Stats;
   hydrated: boolean;
   mode: "daily" | "practice";
+  difficulty: Difficulty;
+  maxGuesses: number;
   onShare: () => void;
   onPlayAgain: () => void;
   onReturnToDaily: () => void;
@@ -285,6 +362,8 @@ function EndPanel({
   stats,
   hydrated,
   mode,
+  difficulty,
+  maxGuesses,
   onShare,
   onPlayAgain,
   onReturnToDaily,
@@ -317,7 +396,11 @@ function EndPanel({
         </div>
       )}
       {hydrated ? (
-        <StatsPanel stats={stats} highlight={status === "won" ? guesses.length : null} />
+        <StatsPanel
+          stats={stats}
+          highlight={status === "won" ? guesses.length : null}
+          maxGuesses={maxGuesses}
+        />
       ) : (
         <div className="flex w-full flex-col gap-3">
           <div className="grid grid-cols-4 gap-2">
@@ -342,7 +425,8 @@ function EndPanel({
         <>
           <Countdown />
           <p className="text-xs text-neutral-500">
-            Brandle #{num} · {answer.length} letters · come back tomorrow.
+            Brandle #{num} · {answer.length} letters · {DIFFICULTY[difficulty].label} · come
+            back tomorrow.
           </p>
         </>
       )}
@@ -359,15 +443,13 @@ function EndPanel({
         >
           Play Again
         </button>
-        {mode === "daily" && (
-          <button
-            type="button"
-            onClick={onShare}
-            className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:hover:bg-neutral-800"
-          >
-            Share result
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={onShare}
+          className="w-full rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold transition hover:bg-neutral-100 active:scale-95 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          {mode === "practice" ? "Share (Practice)" : "Share result"}
+        </button>
         {mode === "practice" && (
           <button
             type="button"

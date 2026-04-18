@@ -1,4 +1,5 @@
-import { evaluateGuess, MAX_GUESSES, type TileState } from "./game";
+import { DIFFICULTY, type Difficulty } from "./difficulty";
+import { evaluateGuess, type TileState } from "./game";
 
 const EMOJI: Record<TileState, string> = {
   correct: "🟩",
@@ -25,22 +26,26 @@ export function getPuzzleNumber(date: Date = new Date()): number {
 export function buildShareString(
   guesses: string[],
   answer: string,
-  won: boolean
+  won: boolean,
+  category: string,
+  practice = false,
+  difficulty: Difficulty = "medium"
 ): string {
   const num = getPuzzleNumber();
-  const score = won ? `${guesses.length}/${MAX_GUESSES}` : `X/${MAX_GUESSES}`;
+  const score = won
+    ? `${guesses.length}/${DIFFICULTY[difficulty].maxGuesses}`
+    : `X/${DIFFICULTY[difficulty].maxGuesses}`;
+  const marker = DIFFICULTY[difficulty].shareMarker;
   const lines = guesses.map((g) =>
     evaluateGuess(g, answer)
       .map((s) => EMOJI[s])
       .join("")
   );
-  return [
-    `Brandle #${num} · ${answer.length} letters · ${score}`,
-    "",
-    ...lines,
-    "",
-    "https://brandle.today",
-  ].join("\n");
+  const diffLabel = difficulty !== "medium" ? ` · ${DIFFICULTY[difficulty].label}` : "";
+  const header = practice
+    ? `Brandle · ${answer.length} letters · ${category}${diffLabel} · ${score} (Practice)${marker ? " " + marker : ""}`
+    : `Brandle #${num} · ${answer.length} letters · ${category}${diffLabel} · ${score}${marker ? " " + marker : ""}`;
+  return [header, "", ...lines, "", "https://brandle.today"].join("\n");
 }
 
 function hasNavigator(): boolean {

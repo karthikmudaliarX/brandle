@@ -1,8 +1,12 @@
 import { MAX_GUESSES } from "./game";
 import { getPuzzleNumber } from "./share";
+import type { Difficulty } from "./difficulty";
 
-const STORAGE_KEY = "brandle.stats.v1";
 const PROGRESS_KEY = "brandle.progress.v1";
+
+function statsKey(difficulty: Difficulty): string {
+  return `brandle.stats.${difficulty}.v1`;
+}
 
 export type Stats = {
   played: number;
@@ -19,6 +23,7 @@ export type DailyProgress = {
   puzzleNumber: number;
   guesses: string[];
   status: "playing" | "won" | "lost";
+  difficulty: Difficulty;
 };
 
 export const EMPTY_STATS: Stats = {
@@ -30,10 +35,20 @@ export const EMPTY_STATS: Stats = {
   lastCompleted: null,
 };
 
-export function loadStats(): Stats {
+export function loadStats(difficulty: Difficulty = "medium"): Stats {
   if (typeof window === "undefined") return EMPTY_STATS;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    // One-time migration: copy old medium stats if medium key is empty.
+    if (difficulty === "medium") {
+      const oldKey = "brandle.stats.v1";
+      const mediumKey = statsKey("medium");
+      if (!window.localStorage.getItem(mediumKey) && window.localStorage.getItem(oldKey)) {
+        const oldRaw = window.localStorage.getItem(oldKey)!;
+        window.localStorage.setItem(mediumKey, oldRaw);
+        window.localStorage.removeItem(oldKey);
+      }
+    }
+    const raw = window.localStorage.getItem(statsKey(difficulty));
     if (!raw) return EMPTY_STATS;
     const parsed = JSON.parse(raw) as Stats;
     // Patch shape if distribution length drifted.
@@ -46,10 +61,10 @@ export function loadStats(): Stats {
   }
 }
 
-export function saveStats(stats: Stats): void {
+export function saveStats(stats: Stats, difficulty: Difficulty = "medium"): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+    window.localStorage.setItem(statsKey(difficulty), JSON.stringify(stats));
   } catch {
     // ignore quota / disabled storage
   }
@@ -85,13 +100,14 @@ export function recordGame(
   return next;
 }
 
-export function loadProgress(): DailyProgress | null {
+export function loadProgress(difficulty: Difficulty): DailyProgress | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(PROGRESS_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw) as DailyProgress;
     if (p.puzzleNumber !== getPuzzleNumber()) return null;
+    if (p.difficulty !== difficulty) return null;
     return p;
   } catch {
     return null;
