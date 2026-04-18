@@ -62,16 +62,15 @@ export function Game() {
   const activeBrand = practiceBrand ?? brand;
   const length = answer.length;
 
-  // Hydrate stats and any in-progress game for today.
+  // Effect 1: Mount-only. Loads initial game state + stats once. Never re-runs.
   useEffect(() => {
     const id = window.setTimeout(() => {
-      setStats(loadStats(difficulty));
-      const progress = loadProgress(difficulty);
+      const d = difficulty; // captured at mount time from state
+      setStats(loadStats(d));
+      const progress = loadProgress(d);
       if (progress && progress.puzzleNumber === puzzleNumber) {
         setGuesses(progress.guesses);
         setStatus(progress.status);
-        // If the saved game was already finished, mark as recorded so we don't
-        // double-count when the next useEffect runs.
         if (progress.status !== "playing") {
           recordedRef.current = true;
         }
@@ -79,7 +78,15 @@ export function Game() {
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(id);
-  }, [difficulty, puzzleNumber]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Empty deps is intentional: difficulty and puzzleNumber are stable at mount.
+  // Re-running on difficulty change is the bug this fixes.
+
+  // Effect 2: Reloads stats when difficulty changes AFTER hydration. Never touches game state.
+  useEffect(() => {
+    if (!hydrated) return;
+    setStats(loadStats(difficulty));
+  }, [difficulty, hydrated]);
 
   // Persist daily progress whenever guesses or status change (post-hydration).
   useEffect(() => {
@@ -175,8 +182,15 @@ export function Game() {
       setDifficulty(d);
       saveDifficulty(d);
       setCurrent("");
+      if (mode === "practice") {
+        const next = getRandomBrand(answer);
+        setPracticeAnswer(next.name);
+        setGuesses([]);
+        setStatus("playing");
+        setShakeKey(0);
+      }
     },
-    [difficultyLocked]
+    [difficultyLocked, mode, answer]
   );
 
   const playAgain = useCallback(() => {
@@ -226,11 +240,17 @@ export function Game() {
   return (
     <div className="flex w-full max-w-xl flex-col items-center gap-3 px-4">
       <header className="relative flex w-full flex-col items-center gap-1 pt-4">
-        <div className="absolute right-0 top-4 flex items-center gap-1">
+        <div className="absolute right-0 top-4 flex items-center gap-2">
+          {hydrated && stats.played === 0 && guesses.length === 0 && current === "" && (
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-800">
+              New? Tap
+              <span className="font-black">?</span>
+            </div>
+          )}
           <Link
             href="/how-to-play"
             aria-label="How to play"
-            className="rounded p-1 text-sm font-bold text-neutral-400 transition hover:text-neutral-900 dark:hover:text-neutral-100"
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 bg-white text-xs font-bold text-neutral-500 transition hover:border-neutral-400 hover:text-neutral-800 dark:border-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-500 dark:hover:text-neutral-200"
           >
             ?
           </Link>
@@ -244,15 +264,15 @@ export function Game() {
             </span>
           )}
         </h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+        <p className="text-sm text-neutral-500">
           Today&apos;s brand has{" "}
-          <span className="font-bold text-neutral-900 dark:text-neutral-100">
+          <span className="font-bold text-emerald-700 dark:text-emerald-400">
             {length} letters
           </span>
           {config.showCategory && (
             <>
               {" "}· category:{" "}
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                 {activeBrand.category}
               </span>
             </>
@@ -260,7 +280,7 @@ export function Game() {
           {config.showLetterHint && (
             <>
               {" "}· starts with:{" "}
-              <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
                 {answer[0]}
               </span>
             </>
