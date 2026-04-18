@@ -53,7 +53,6 @@ export const BRANDS: Brand[] = [
   { name: "ATARI", category: "Gaming" },
   { name: "CANON", category: "Electronics" },
   { name: "CANVA", category: "Technology", fact: "Started in Australia as an easier way to create visual designs." },
-  { name: "CARTA", category: "Finance" },
   { name: "CHIME", category: "Finance" },
   { name: "COACH", category: "Fashion" },
   { name: "COORS", category: "Beverage" },
@@ -64,7 +63,6 @@ export const BRANDS: Brand[] = [
   { name: "GOPRO", category: "Electronics" },
   { name: "GUCCI", category: "Fashion" },
   { name: "HERTZ", category: "Transport" },
-  { name: "HILTI", category: "Industrial" },
   { name: "HONDA", category: "Automotive" },
   { name: "INTEL", category: "Technology" },
   { name: "JUICY", category: "Fashion" },
@@ -72,7 +70,6 @@ export const BRANDS: Brand[] = [
   { name: "BOSCH", category: "Industrial" },
   { name: "KODAK", category: "Photography" },
   { name: "LEXUS", category: "Automotive" },
-  { name: "LINDE", category: "Industrial" },
   { name: "LOTUS", category: "Automotive" },
   { name: "LOTTE", category: "Food" },
   { name: "MANGO", category: "Fashion" },
@@ -84,6 +81,7 @@ export const BRANDS: Brand[] = [
   { name: "PRADA", category: "Fashion" },
   { name: "RICOH", category: "Electronics" },
   { name: "ROLEX", category: "Luxury", fact: "The name was designed to be short and easy to pronounce globally." },
+  { name: "SHEIN", category: "Fashion" },
   { name: "SHELL", category: "Energy" },
   { name: "SHURE", category: "Electronics" },
   { name: "SKYPE", category: "Technology" },
@@ -137,7 +135,6 @@ export const BRANDS: Brand[] = [
   { name: "RIMOWA", category: "Travel" },
   { name: "RIVIAN", category: "Automotive" },
   { name: "SHAZAM", category: "Media" },
-  { name: "SHEIN", category: "Fashion" },
   { name: "SHOPEE", category: "Retail" },
   { name: "SPRINT", category: "Telecom" },
   { name: "STRIPE", category: "Finance", fact: "The Collison brothers built it to make online payments easier for developers." },
@@ -158,7 +155,6 @@ export const BRANDS: Brand[] = [
 
   // 7 letters
   { name: "ALIBABA", category: "Internet" },
-  { name: "BANDAID", category: "Personal Care" },
   { name: "BENTLEY", category: "Automotive" },
   { name: "BINANCE", category: "Finance" },
   { name: "BITCOIN", category: "Finance" },
@@ -224,6 +220,7 @@ export const BRANDS: Brand[] = [
   { name: "QUALCOMM", category: "Technology" },
   { name: "RABOBANK", category: "Finance" },
   { name: "REYNOLDS", category: "Consumer Goods" },
+  { name: "SKECHERS", category: "Apparel" },
   { name: "SNAPCHAT", category: "Internet", fact: "It was originally called Picaboo." },
   { name: "SOFTBANK", category: "Telecom" },
   { name: "STARLINK", category: "Telecom" },
@@ -234,31 +231,25 @@ export const BRANDS: Brand[] = [
 
   // 9 letters
   { name: "ACCENTURE", category: "Consulting", fact: "The name comes from accent on the future." },
-  { name: "AIRCANADA", category: "Airlines" },
   { name: "ANTHROPIC", category: "Technology" },
-  { name: "BANDWIDTH", category: "Technology" },
   { name: "BLACKROCK", category: "Finance" },
   { name: "BLOOMBERG", category: "Media" },
   { name: "CARREFOUR", category: "Retail" },
   { name: "CHEVROLET", category: "Automotive" },
   { name: "FERRAGAMO", category: "Fashion" },
-  { name: "FRESENIUS", category: "Healthcare" },
   { name: "GRAMMARLY", category: "Technology" },
   { name: "HONEYWELL", category: "Industrial" },
   { name: "HOOTSUITE", category: "Technology" },
   { name: "INSTAGRAM", category: "Internet" },
   { name: "LULULEMON", category: "Apparel" },
   { name: "MAILCHIMP", category: "Technology" },
-  { name: "MCDONALDS", category: "Food" },
   { name: "MICROSOFT", category: "Technology", fact: "The name blends microcomputer and software." },
   { name: "NORDSTROM", category: "Retail" },
   { name: "OVERSTOCK", category: "Retail" },
   { name: "PANASONIC", category: "Electronics" },
   { name: "PARAMOUNT", category: "Media" },
   { name: "ROBINHOOD", category: "Finance" },
-  { name: "ROYALMAIL", category: "Logistics" },
   { name: "SANTANDER", category: "Finance" },
-  { name: "SKECHERS", category: "Apparel" },
   { name: "STARBUCKS", category: "Food", fact: "Named after the first mate in Moby Dick." },
   { name: "WALGREENS", category: "Retail" },
   { name: "WORDPRESS", category: "Technology" },
@@ -280,15 +271,3 @@ const CLEAN: Brand[] = (() => {
 })();
 
 export const PUZZLE_BRANDS = CLEAN;
-
-// Build a Set of valid brand names for guess validation.
-export const VALID_GUESSES: Set<string> = new Set(CLEAN.map((b) => b.name));
-
-// Brands grouped by length for pickers.
-export const BRANDS_BY_LENGTH: Record<number, Brand[]> = (() => {
-  const map: Record<number, Brand[]> = {};
-  for (const b of CLEAN) {
-    (map[b.name.length] ||= []).push(b);
-  }
-  return map;
-})();

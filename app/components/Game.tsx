@@ -98,9 +98,10 @@ export function Game() {
     });
   }, [difficulty, hydrated, status, puzzleNumber, guesses.length, mode]);
 
-  const showToast = useCallback((msg: string) => {
+  const showToast = useCallback((msg: string, durationMs?: number) => {
+    const duration = durationMs ?? Math.max(1600, msg.length * 200);
     setToast(msg);
-    window.setTimeout(() => setToast(null), 1600);
+    window.setTimeout(() => setToast(null), duration);
   }, []);
 
   const handleKey = useCallback(
@@ -108,6 +109,11 @@ export function Game() {
       if (status !== "playing") return;
 
       if (key === "ENTER") {
+        if (guesses.includes(current)) {
+          setShakeKey((k) => k + 1);
+          showToast("Already guessed");
+          return;
+        }
         if (current.length !== length) {
           setShakeKey((k) => k + 1);
           showToast(`Need ${length} letters`);
@@ -126,7 +132,7 @@ export function Game() {
           showToast("Got it!");
         } else if (next.length >= maxGuesses) {
           setStatus("lost");
-          showToast(answer);
+          showToast(answer, answer.length * 300);
         }
         return;
       }
