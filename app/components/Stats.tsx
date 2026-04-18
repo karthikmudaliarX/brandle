@@ -1,14 +1,14 @@
-import { MAX_GUESSES } from "../lib/game";
 import { winRate, type Stats } from "../lib/stats";
 
 type StatsPanelProps = {
   stats: Stats;
   // Highlight this row in the distribution (the row the player just won on).
   highlight?: number | null;
+  maxGuesses: number;
 };
 
-export function StatsPanel({ stats, highlight }: StatsPanelProps) {
-  const max = Math.max(1, ...stats.distribution);
+export function StatsPanel({ stats, highlight, maxGuesses }: StatsPanelProps) {
+  const max = Math.max(1, ...stats.distribution.slice(0, maxGuesses));
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="grid grid-cols-4 gap-2 text-center">
@@ -22,7 +22,7 @@ export function StatsPanel({ stats, highlight }: StatsPanelProps) {
           Guess distribution
         </p>
         <div className="flex flex-col gap-1">
-          {Array.from({ length: MAX_GUESSES }).map((_, i) => {
+          {Array.from({ length: maxGuesses }).map((_, i) => {
             const count = stats.distribution[i] ?? 0;
             const widthPct = Math.max(6, Math.round((count / max) * 100));
             const isHighlight = highlight === i + 1;

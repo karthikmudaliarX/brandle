@@ -1,18 +1,19 @@
 import { Tile } from "./Tile";
-import { evaluateGuess, MAX_GUESSES, type TileState } from "../lib/game";
+import { evaluateGuess, type TileState } from "../lib/game";
 
 type GridProps = {
   answer: string;
   guesses: string[];
   current: string;
   shakeKey: number;
+  maxGuesses: number;
 };
 
-export function Grid({ answer, guesses, current, shakeKey }: GridProps) {
+export function Grid({ answer, guesses, current, shakeKey, maxGuesses }: GridProps) {
   const length = answer.length;
   const rows: { letters: string[]; states: TileState[]; isCurrent: boolean }[] = [];
 
-  for (let r = 0; r < MAX_GUESSES; r++) {
+  for (let r = 0; r < maxGuesses; r++) {
     if (r < guesses.length) {
       const g = guesses[r];
       rows.push({
