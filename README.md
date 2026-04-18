@@ -4,6 +4,8 @@ Brandle is a daily Wordle-style puzzle for brand names. Each day, the answer is
 picked deterministically from a curated brand list, with the letter count and
 category shown up front as hints.
 
+[Play Brandle](https://brandle-ten.vercel.app/)
+
 ![Brandle game screenshot](public/screenshot.png)
 
 ## Features
@@ -23,15 +25,22 @@ category shown up front as hints.
 - Tailwind CSS 4
 - TypeScript
 
-## Run Locally
+## Play Online
+
+No local setup is needed to play. Open
+[brandle-ten.vercel.app](https://brandle-ten.vercel.app/) and start guessing.
+
+## Develop Locally
+
+Local setup is only needed if you want to change the code:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). If that port is already in
-use, Next.js will print the alternate local URL.
+Then open [http://localhost:3000](http://localhost:3000). If that port is
+already in use, Next.js will print the alternate local URL.
 
 ## Project Structure
 
