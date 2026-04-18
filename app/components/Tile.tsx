@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { TileState } from "../lib/game";
 
 const STATE_CLASSES: Record<TileState, string> = {
@@ -19,26 +19,30 @@ type TileProps = {
 
 export function Tile({ letter, state, delay = 0 }: TileProps) {
   const revealed = state === "correct" || state === "present" || state === "absent";
-  const [showColor, setShowColor] = useState(!revealed);
+  // Start showing color immediately for tiles restored from saved state.
+  // Only hide-then-reveal when state transitions to revealed (new guess submitted).
+  const [showColor, setShowColor] = useState(revealed);
+  const prevState = useRef(state);
   const displayState = revealed && !showColor ? "pending" : state;
 
   useEffect(() => {
+    if (prevState.current === state) return; // skip on mount — no animation for restored tiles
+    prevState.current = state;
+
     if (!revealed) {
       setShowColor(true);
       return;
     }
 
     setShowColor(false);
-    const id = window.setTimeout(() => {
-      setShowColor(true);
-    }, delay + 200);
+    const id = window.setTimeout(() => setShowColor(true), delay + 200);
     return () => window.clearTimeout(id);
   }, [delay, revealed, state]);
 
   return (
     <div
-      className={`flex aspect-square w-full items-center justify-center border-2 text-2xl font-bold uppercase select-none sm:text-3xl ${STATE_CLASSES[displayState]} ${revealed ? "tile-flip" : ""}`}
-      style={revealed && delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
+      className={`flex aspect-square w-full items-center justify-center border-2 text-2xl font-bold uppercase select-none sm:text-3xl ${STATE_CLASSES[displayState]} ${revealed && !showColor ? "tile-flip" : ""}`}
+      style={revealed && !showColor && delay > 0 ? { animationDelay: `${delay}ms` } : undefined}
     >
       {letter}
     </div>
