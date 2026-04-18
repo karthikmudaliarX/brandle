@@ -277,15 +277,12 @@ export function Game() {
               </span>
             </>
           )}
-          {config.showLetterHint && (
-            <>
-              {" "}· starts with:{" "}
-              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
-                {answer[0]}
-              </span>
-            </>
-          )}
         </p>
+        {config.showHint && activeBrand.hint && (
+          <p className="max-w-xs text-center text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
+            💡 {activeBrand.hint}
+          </p>
+        )}
         <DifficultySelector
           value={difficulty}
           onChange={handleDifficultyChange}

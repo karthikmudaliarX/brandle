@@ -3,7 +3,7 @@ export type Difficulty = "easy" | "medium" | "hard";
 export type DifficultyConfig = {
   maxGuesses: number;
   showCategory: boolean;
-  showLetterHint: boolean;
+  showHint: boolean;
   shareMarker: string;
   label: string;
 };
@@ -12,21 +12,21 @@ export const DIFFICULTY: Record<Difficulty, DifficultyConfig> = {
   easy: {
     maxGuesses: 8,
     showCategory: true,
-    showLetterHint: true,
+    showHint: true,
     shareMarker: "🟢",
     label: "Easy",
   },
   medium: {
     maxGuesses: 6,
     showCategory: true,
-    showLetterHint: false,
+    showHint: false,
     shareMarker: "",
     label: "Medium",
   },
   hard: {
     maxGuesses: 4,
     showCategory: false,
-    showLetterHint: false,
+    showHint: false,
     shareMarker: "🔴",
     label: "Hard",
   },
