@@ -183,7 +183,7 @@ export function Game() {
   );
 
   return (
-    <div className="flex w-full max-w-xl flex-col items-center gap-6 px-4">
+    <div className="flex w-full max-w-xl flex-col items-center gap-3 px-4">
       <header className="relative flex w-full flex-col items-center gap-1 pt-4">
         <div className="absolute right-0 top-4">
           <ThemeToggle />

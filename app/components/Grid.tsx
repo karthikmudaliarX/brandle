@@ -36,8 +36,10 @@ export function Grid({ answer, guesses, current, shakeKey }: GridProps) {
     }
   }
 
-  // Cap tile width so very short brands don't produce huge tiles.
-  const maxRowWidth = Math.min(60, 8.5 * length);
+  // Cap tile size to 52px so 6 rows fit on screen without scrolling.
+  const MAX_TILE = 52;
+  const GAP = 6; // gap-1.5 = 6px
+  const maxRowWidth = Math.min(576, length * MAX_TILE + (length - 1) * GAP);
 
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -47,7 +49,7 @@ export function Grid({ answer, guesses, current, shakeKey }: GridProps) {
           className={`grid w-full gap-1.5 ${row.isCurrent && shakeKey > 0 ? "animate-shake" : ""}`}
           style={{
             gridTemplateColumns: `repeat(${length}, minmax(0, 1fr))`,
-            maxWidth: `${maxRowWidth}ch`,
+            maxWidth: `${maxRowWidth}px`,
           }}
         >
           {row.letters.map((letter, i) => (

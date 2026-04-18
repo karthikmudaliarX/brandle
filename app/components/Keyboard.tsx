@@ -29,8 +29,8 @@ export function Keyboard({ onKey, states, disabled }: KeyboardProps) {
             const isWide = key === "ENTER" || key === "BACK";
             const state = states[key] ?? "empty";
             const className = `${KEY_STATE_CLASS[state]} ${
-              isWide ? "px-3 text-xs sm:text-sm" : "min-w-[8.5%] sm:min-w-[36px]"
-            } flex h-12 flex-1 items-center justify-center rounded font-semibold uppercase transition-colors active:scale-95 disabled:opacity-60 sm:h-14`;
+              isWide ? "px-3 text-xs sm:text-sm" : "min-w-[8.5%] sm:min-w-[34px]"
+            } flex h-10 flex-1 items-center justify-center rounded font-semibold uppercase transition-colors active:scale-95 disabled:opacity-60 sm:h-12`;
             return (
               <button
                 key={key}
